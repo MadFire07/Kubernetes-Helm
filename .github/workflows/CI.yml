@@ -9,41 +9,43 @@ on:
       - main # ou la branche que vous souhaitez surveiller pour les modifications
 
 jobs:
-  # Définition des jobs à exécuter
-    stages:
-      - terraform_init_validate
-      - terraform_plan
-      - infracost
-      - terraform_apply
+  image: hashicorp/terraform:latest  # Utilisation d'une image Docker avec Terraform pré-installé
 
-    # Définition des jobs pour chaque étape
-    terraform_init_validate:
-      stage: terraform_init_validate
-      script:
-        - terraform init
-        - terraform validate
+  stages:
+    - terraform_init_validate
+    - terraform_plan
+    - infracost
+    - terraform_apply
 
-    terraform_plan:
-      stage: terraform_plan
-      script:
-        - terraform plan -out=tfplan
-      artifacts:
-        paths:
-          - tfplan
+  # Configuration des jobs pour chaque étape
+  terraform_init_validate:
+    stage: terraform_init_validate
+    script:
+      - terraform init
+      - terraform validate
 
-    infracost:
-      stage: infracost
-      script:
-        - infracost --tfjson tfplan.json
+  terraform_plan:
+    stage: terraform_plan
+    script:
+      - terraform plan -out=tfplan
+    artifacts:
+      paths:
+        - tfplan
 
-    terraform_apply:
-      stage: terraform_apply
-      script:
-        - |
-          if [ "$CI_COMMIT_BRANCH" == "production" ]; then
-            terraform apply tfplan
-          else
-            echo "Manual validation required for applying changes to infrastructure."
-          fi
-      when: manual
-      allow_failure: false
+  infracost:
+    stage: infracost
+    script:
+      - infracost --tfjson tfplan.json
+
+  terraform_apply:
+    stage: terraform_apply
+    script:
+      - |
+        if [ "$CI_COMMIT_BRANCH" == "main" ]; then  # Vérifiez si vous souhaitez déployer sur la branche "main"
+          terraform apply tfplan
+        else
+          echo "Manual validation required for applying changes to infrastructure."
+        fi
+    when: manual
+    allow_failure: false
+
