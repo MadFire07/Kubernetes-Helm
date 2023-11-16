@@ -1,37 +1,49 @@
-stages:
-  - terraform_init_validate
-  - terraform_plan
-  - infracost
-  - terraform_apply
+name: CI/CD Pipeline
 
-# Définition des jobs pour chaque étape
-terraform_init_validate:
-  stage: terraform_init_validate
-  script:
-    - terraform init
-    - terraform validate
+on:
+  push:
+    branches:
+      - main # ou la branche que vous souhaitez surveiller pour les modifications
+  pull_request:
+    branches:
+      - main # ou la branche que vous souhaitez surveiller pour les modifications
 
-terraform_plan:
-  stage: terraform_plan
-  script:
-    - terraform plan -out=tfplan
-  artifacts:
-    paths:
-      - tfplan
+jobs:
+  # Définition des jobs à exécuter
+    stages:
+      - terraform_init_validate
+      - terraform_plan
+      - infracost
+      - terraform_apply
 
-infracost:
-  stage: infracost
-  script:
-    - infracost --tfjson tfplan.json
+    # Définition des jobs pour chaque étape
+    terraform_init_validate:
+      stage: terraform_init_validate
+      script:
+        - terraform init
+        - terraform validate
 
-terraform_apply:
-  stage: terraform_apply
-  script:
-    - |
-      if [ "$CI_COMMIT_BRANCH" == "production" ]; then
-        terraform apply tfplan
-      else
-        echo "Manual validation required for applying changes to infrastructure."
-      fi
-  when: manual
-  allow_failure: false
+    terraform_plan:
+      stage: terraform_plan
+      script:
+        - terraform plan -out=tfplan
+      artifacts:
+        paths:
+          - tfplan
+
+    infracost:
+      stage: infracost
+      script:
+        - infracost --tfjson tfplan.json
+
+    terraform_apply:
+      stage: terraform_apply
+      script:
+        - |
+          if [ "$CI_COMMIT_BRANCH" == "production" ]; then
+            terraform apply tfplan
+          else
+            echo "Manual validation required for applying changes to infrastructure."
+          fi
+      when: manual
+      allow_failure: false
