@@ -29,15 +29,13 @@ jobs:
         run: |
           # Votre commande pour exécuter InfraCost ici
 
-      - name: Manual Approval
-        if: github.event_name == 'push'
-        uses: wei/ci-approval@v2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          message: 'Please review and approve the Terraform changes.'
+      - name: Wait for Approval
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        run: |
+          echo "Please approve the Terraform changes in the Pull Request comments."
 
       - name: Terraform Apply
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event_name == 'push' && github.event.action == 'closed'
+        if: github.event_name == 'issue_comment' && contains(github.event.comment.body, 'approve') && github.event.issue.pull_request
         run: terraform apply tfplan
         env:
           TF_CLI_ARGS: "-auto-approve"
