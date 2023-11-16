@@ -1,51 +1,43 @@
-name: CI/CD Pipeline
+name: Terraform Deployment
 
 on:
   push:
     branches:
-      - main # ou la branche que vous souhaitez surveiller pour les modifications
-  pull_request:
-    branches:
-      - main # ou la branche que vous souhaitez surveiller pour les modifications
+      - main
 
 jobs:
-  image: hashicorp/terraform:latest  # Utilisation d'une image Docker avec Terraform pré-installé
+  terraform:
+    runs-on: ubuntu-latest
 
-  stages:
-    - terraform_init_validate
-    - terraform_plan
-    - infracost
-    - terraform_apply
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-  # Configuration des jobs pour chaque étape
-  terraform_init_validate:
-    stage: terraform_init_validate
-    script:
-      - terraform init
-      - terraform validate
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v1
 
-  terraform_plan:
-    stage: terraform_plan
-    script:
-      - terraform plan -out=tfplan
-    artifacts:
-      paths:
-        - tfplan
+      - name: Terraform Init
+        run: terraform init
 
-  infracost:
-    stage: infracost
-    script:
-      - infracost --tfjson tfplan.json
+      - name: Terraform Validate
+        run: terraform validate
 
-  terraform_apply:
-    stage: terraform_apply
-    script:
-      - |
-        if [ "$CI_COMMIT_BRANCH" == "main" ]; then  # Vérifiez si vous souhaitez déployer sur la branche "main"
-          terraform apply tfplan
-        else
-          echo "Manual validation required for applying changes to infrastructure."
-        fi
-    when: manual
-    allow_failure: false
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
 
+      - name: Run InfraCost
+        run: |
+          # Votre commande pour exécuter InfraCost ici
+
+      - name: Manual Approval
+        if: github.event_name == 'push'
+        uses: wei/ci-approval@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          message: 'Please review and approve the Terraform changes.'
+
+      - name: Terraform Apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event_name == 'push' && github.event.action == 'closed'
+        run: terraform apply tfplan
+        env:
+          TF_CLI_ARGS: "-auto-approve"
